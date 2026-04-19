@@ -51,14 +51,3 @@ $ python main.py --swimmer-speed 0.3 --alignment-timescale 1.0
 ```
 
 To save checkpoints into a folder `checkpoints`, the command `mkdir checkpoints` can be used from the root folder of the repository.
-
-## Bibliography
-Burns, K.J., Vasil, G.M., Oishi, J.S., Lecoanet, D. and Brown, B.P., 2020. Dedalus: A flexible framework for numerical simulations with spectral methods. Physical Review Research, 2(2), p.023068.
-
-Colabrese, S., Gustavsson, K., Celani, A. and Biferale, L., 2017. Flow navigation by smart microswimmers via reinforcement learning. Physical Review Letters, 118(15), p.158004.
-
-Mishra, S., Chang, M., Arza, V.S. and Rubinstein, S., 2025. A perspective on fluid mechanical environments for challenges in reinforcement learning. In Finding the Frame Workshop at the Reinforcement Learning Conference.
-
-### Additional acknowledgements
-
-[Maxwell Svetlik](https://github.com/maxsvetlik)
