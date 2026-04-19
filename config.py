@@ -17,7 +17,7 @@ N_STEPS = int(total_time/DT)           # Steps per episode
 GAMMA = 0.99            # Discount factor
 EPSILON_START = 0.2     # Initial exploration rate
 LEARNING_RATE = 0.01     # Q-learning rate
-INITIAL_Q_VALUE = 1000.0  # Optimistic initialization
+INITIAL_Q_VALUE = 100.0  # Optimistic initialization
 
 # --- Evaluation Parameters ---
 N_EPISODES_EVAL = 10

@@ -24,16 +24,22 @@ def train(
     q_initial = config.INITIAL_Q_VALUE * np.ones((12, 4))
     agent = QLearningAgent(q=q_initial, gamma=config.GAMMA, seed=seed)
     episode_returns = []
+    mean_max_q_values = []  # Track mean max Q-values
 
     # Initialize plotting
     if logging:
         plt.ion()
-        fig, ax = plt.subplots()
-        (line,) = ax.plot([], [], label="Episode Return")
-        ax.set_xlabel("Episode")
-        ax.set_ylabel("Return")
-        ax.set_title("Training Progress")
-        ax.legend()
+        fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+        (line_return,) = ax1.plot([], [], label="Episode Return")
+        (line_q,) = ax2.plot([], [], label="Mean Max Q-Value", color="orange")
+
+        ax1.set_ylabel("Return")
+        ax1.set_title("Training Progress")
+        ax1.legend()
+
+        ax2.set_xlabel("Episode")
+        ax2.set_ylabel("Mean Max Q")
+        ax2.legend()
 
     for episode in tqdm(range(n_episodes)):
         obs = env.reset()
@@ -50,14 +56,22 @@ def train(
             episode_return += reward
 
         episode_returns.append(episode_return)
+        current_mean_max_q = np.mean(np.max(agent.q, axis=1))
+        mean_max_q_values.append(current_mean_max_q)
 
         if logging:
             # Update plot every 50 episodes
             if episode % 50 == 0 or episode == n_episodes - 1:
-                line.set_xdata(range(len(episode_returns)))
-                line.set_ydata(episode_returns)
-                ax.relim()
-                ax.autoscale_view()
+                line_return.set_xdata(range(len(episode_returns)))
+                line_return.set_ydata(episode_returns)
+                line_q.set_xdata(range(len(mean_max_q_values)))
+                line_q.set_ydata(mean_max_q_values)
+
+                ax1.relim()
+                ax1.autoscale_view()
+                ax2.relim()
+                ax2.autoscale_view()
+
                 fig.canvas.draw()
                 fig.canvas.flush_events()
 
@@ -76,5 +90,5 @@ def train(
         if save:
             filename = config.RETURNS_PLOT_PATH
             plt.savefig(filename)
-            print(f"Episode returns plot saved to {filename}")
+            print(f"Training progress plot saved to {filename}")
         plt.show()

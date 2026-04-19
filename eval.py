@@ -15,6 +15,7 @@ def plot_policy(
     n_episodes: int,
     positions: np.ndarray,
     positions_naive: np.ndarray,
+    actions_taken: np.ndarray,
     plot_params: Dict[str, float],
 ):
     ax2 = plt.subplot(111)
@@ -53,6 +54,26 @@ def plot_policy(
             color="xkcd:medium grey",
             alpha=0.2,
         )
+
+        # Plot arrows for actions every 10 steps
+        arrow_step = 100
+        # Action mapping to vectors: 0: Right, 1: Up, 2: Left, 3: Down
+        u = np.array([1, 0, -1, 0])
+        v = np.array([0, 1, 0, -1])
+        
+        for i in range(0, len(positions[:, 0, episode]), arrow_step):
+            action = actions_taken[i, episode]
+            ax2.quiver(
+                positions[i, 0, episode],
+                positions[i, 1, episode],
+                u[action],
+                v[action],
+                color="xkcd:rich purple",
+                alpha=0.6,
+                scale=20,
+                width=0.005,
+            )
+
         plt.plot(
             positions[-1, 0, episode],
             positions[-1, 1, episode],
@@ -78,7 +99,7 @@ def plot_policy(
     plt.legend(bbox_to_anchor=(1.05, 0.05), loc="lower left")
     plt.title(rf"$\phi={plot_params['phi']}, \psi={plot_params['psi']}$")
     plt.tight_layout()
-    plt.savefig(f"phi{plot_params['phi']}_psi{plot_params['psi']}.pdf", dpi=300)
+    plt.savefig(f"phi{plot_params['phi']}_psi{plot_params['psi']}.png", dpi=300)
 
 
 def eval(
@@ -112,6 +133,7 @@ def eval(
     total_episode_return_naive = 0
     positions = np.zeros([n_steps, 2, n_episodes])
     positions_naive = np.zeros([n_steps, 2, n_episodes])
+    actions_taken = np.zeros([n_steps, n_episodes], dtype=int)
 
     for episode in range(n_episodes):
         episode_return = 0
@@ -128,6 +150,7 @@ def eval(
         for i in range(n_steps):
 
             action = policy[obs]
+            actions_taken[i, episode] = action
             next_obs, reward = env.step(action)
             _, reward_naive = env_naive.step(1)
 
@@ -160,7 +183,7 @@ def eval(
 
     if make_plot:
         plot_params = {"phi": env.swimmer_speed, "psi": env.alignment_timescale}
-        plot_policy(n_episodes, positions, positions_naive, plot_params)
+        plot_policy(n_episodes, positions, positions_naive, actions_taken, plot_params)
 
 
 if __name__ == "__main__":
