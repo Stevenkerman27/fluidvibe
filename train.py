@@ -7,9 +7,12 @@ from environments.base import Environment
 import config
 
 
-def save_q_table(q: np.ndarray, n_episodes: int) -> None:
-    filename = config.Q_TABLE_PATH
+def save_q_table(q: np.ndarray, env: Environment, n_episodes: int) -> str:
+    phi = env.swimmer_speed
+    psi = env.alignment_timescale
+    filename = f"{config.SAVE_FOLDER}q_table_phi{phi}_psi{psi}_{n_episodes}.npy"
     np.save(filename, q)
+    return filename
 
 
 def train(
@@ -83,12 +86,15 @@ def train(
                 print(f"Policy: \t {np.argmax(agent.q, axis=1)}.")
 
     if save:
-        save_q_table(agent.q, n_episodes)
+        filename_q = save_q_table(agent.q, env, n_episodes)
+        print(f"Q-table saved to {filename_q}")
 
     if logging:
         plt.ioff()
         if save:
-            filename = config.RETURNS_PLOT_PATH
+            phi = env.swimmer_speed
+            psi = env.alignment_timescale
+            filename = f"{config.SAVE_FOLDER}episode_returns_phi{phi}_psi{psi}_{n_episodes}.png"
             plt.savefig(filename)
             print(f"Training progress plot saved to {filename}")
         plt.show()

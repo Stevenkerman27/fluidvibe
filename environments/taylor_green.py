@@ -3,17 +3,16 @@ from typing import Optional
 import numpy as np
 
 from environments.base import Environment
+import config
 
-# Flow parameters
-_SWIMMER_SPEED = 0.3
-_ALIGNMENT_TIMESCALE = 1.0
-
-# Constants for environment
-_FLOW_SPEED = 1.0
-_TIMESTEP = 0.01
-_DIFFUSIVITY_ROTATIONAL = 0.0001
-_DIFFUSIVITY_TRANSLATIONAL = 0.001
-_MIN_FLOW_SPEED_THRESHOLD = 1e-8
+# Constants for environment (now moved to config.py or using config.py as source)
+_SWIMMER_SPEED = config.SWIMMER_SPEED
+_ALIGNMENT_TIMESCALE = config.ALIGNMENT_TIMESCALE
+_FLOW_SPEED = config.FLOW_SPEED
+_TIMESTEP = config.DT
+_DIFFUSIVITY_ROTATIONAL = config.DIFFUSIVITY_ROTATIONAL
+_DIFFUSIVITY_TRANSLATIONAL = config.DIFFUSIVITY_TRANSLATIONAL
+_MIN_FLOW_SPEED_THRESHOLD = config.MIN_FLOW_SPEED_THRESHOLD
 
 
 class TaylorGreenEnvironment(Environment):
@@ -28,10 +27,11 @@ class TaylorGreenEnvironment(Environment):
         diffusivity_translational: float = _DIFFUSIVITY_TRANSLATIONAL,
         seed: Optional[int] = None,
     ):
+        # Handle cases where config values are now lists for parameter sweeping
         self.dt = dt
-        self.swimmer_speed = swimmer_speed
+        self.swimmer_speed = swimmer_speed[0] if isinstance(swimmer_speed, list) else swimmer_speed
         self.u0 = flow_speed
-        self.alignment_timescale = alignment_timescale
+        self.alignment_timescale = alignment_timescale[0] if isinstance(alignment_timescale, list) else alignment_timescale
         self.diffusivity_rotational = diffusivity_rotational
         self.diffusivity_translational = diffusivity_translational
         self.rng = np.random.default_rng(seed=seed)
@@ -70,6 +70,7 @@ class TaylorGreenEnvironment(Environment):
         self.swimming_velocity = self.swimmer_speed * np.array(
             [np.cos(self.orientation), np.sin(self.orientation)]
         )
+        self.initial_x = self.swimmer_position[0]
         self._update_flow_variables()
         observation = self._get_observation()
         return observation
@@ -109,7 +110,16 @@ class TaylorGreenEnvironment(Environment):
 
         # Get the observation and reward for the agent
         observation = self._get_observation()
-        reward = self.swimmer_position[1] - swimmer_position_old[1]
+        
+        dy = self.swimmer_position[1] - swimmer_position_old[1]
+        
+        # Calculate absolute deviation from the starting X coordinate
+        dx_total = self.swimmer_position[0] - self.initial_x
+        
+        # Only penalize if deviation exceeds the threshold
+        lateral_deviation = max(0, abs(dx_total) - config.LATERAL_PENALTY_THRESHOLD)
+        
+        reward = dy - config.LATERAL_PENALTY_WEIGHT * lateral_deviation
 
         return observation, reward
 
@@ -135,7 +145,7 @@ class TaylorGreenEnvironment(Environment):
         )
         self.flow_vorticity = self.u0 * np.cos(x0) * np.cos(x1)
 
-    def _get_observation(self, vorticity_threshold=1.0 / 3.0):
+    def _get_observation(self, vorticity_threshold=config.VORTICITY_THRESHOLD):
         """
         12-state encoder.
         Buckets by vorticity band (neg/zero/pos) × dominant velocity axis+sign.
