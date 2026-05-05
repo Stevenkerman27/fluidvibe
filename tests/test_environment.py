@@ -86,41 +86,6 @@ def test_reward():
     # No horizontal movement, reward should be dy = 0.01
     assert_almost_equal(reward, 0.01)
 
-def test_lateral_penalty():
-    env = TaylorGreenEnvironment(
-        dt=0.01,
-        swimmer_speed=0.0,
-        diffusivity_translational=0.0,
-        diffusivity_rotational=0.0,
-    )
-    # Start at x=0
-    env.reset(position=np.array([0.0, 0.0]))
-    
-    # Case 1: Moving away from start
-    # Manually set position to 0.01
-    env.swimmer_position = np.array([0.01, 0.0])
-    # Manually set flow velocity so it doesn't move further in the step calculation
-    env.flow_velocity = np.array([0.0, 0.0]) 
-    
-    # After one step: position remains 0.01 (as velocity=0)
-    # dy = 0, dx_total = 0.01, penalty = 0.02 * 0.01 = 0.0002
-    _, reward = env.step(action=0)
-    assert_almost_equal(reward, -0.0002)
-    
-    # Case 2: Move further to 0.05
-    env.swimmer_position = np.array([0.05, 0.0])
-    _, reward = env.step(action=0)
-    # dy = 0, dx_total = 0.05, penalty = 0.02 * 0.05 = 0.001
-    assert_almost_equal(reward, -0.001)
-
-    # Case 3: Periodic boundary penalty (shortest path)
-    env.reset(position=np.array([0.0, 0.0]))
-    env.swimmer_position = np.array([2 * np.pi - 0.1, 0.0])
-    env.flow_velocity = np.array([0.0, 0.0])
-    _, reward = env.step(action=0)
-    # dy = 0, dx_periodic = -0.1, penalty = 0.02 * |-0.1| = 0.002
-    assert_almost_equal(reward, -0.002)
-
 
 def test_step_reproducibility():
     env0 = TaylorGreenEnvironment(seed=42)

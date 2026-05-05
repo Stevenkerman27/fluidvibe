@@ -7,13 +7,15 @@ from environments.taylor_green_continuous import TaylorGreenContinuousEnvironmen
 from agent_dqn import DQNAgent
 import config
 
-def train_dqn():
+import itertools
+
+def train_dqn(phi, psi):
     # 1. 初始化环境 (使用连续观测和离散动作)
     env = TaylorGreenContinuousEnvironment(
         dt=config.DT,
-        swimmer_speed=config.SWIMMER_SPEED,
+        swimmer_speed=phi,
         flow_speed=config.FLOW_SPEED,
-        alignment_timescale=config.ALIGNMENT_TIMESCALE,
+        alignment_timescale=psi,
         seed=config.SEED,
         action_type="discrete"
     )
@@ -22,8 +24,8 @@ def train_dqn():
     agent = DQNAgent(
         state_dim=2,      # [vorticity, orientation]
         action_dim=4,     # 0, 90, 180, 270 degrees
-        gamma=config.GAMMA,
-        lr=config.LEARNING_RATE,
+        gamma=config.DQN_GAMMA,
+        lr=config.DQN_LEARNING_RATE,
         batch_size=config.DQN_BATCH_SIZE,
         buffer_capacity=config.DQN_BUFFER_CAPACITY,
         hidden_dim=config.DQN_HIDDEN_DIM,
@@ -33,15 +35,15 @@ def train_dqn():
     )
 
     episode_returns = []
-    epsilon = config.EPSILON_START
+    epsilon = config.DQN_EPSILON_START
     # 使用 config 中的 epsilon 衰减策略
     epsilon_decay = config.DQN_EPSILON_DECAY
     min_epsilon = config.DQN_MIN_EPSILON
 
-    print(f"Starting DQN training on {agent.device}...")
+    print(f"\nStarting DQN training for phi={phi}, psi={psi} on {agent.device}...")
 
     # 3. 训练循环
-    pbar = tqdm(range(config.N_EPISODES_TRAIN))
+    pbar = tqdm(range(config.DQN_N_EPISODES_TRAIN))
     for episode in pbar:
         state = env.reset()
         cumulative_reward = 0
@@ -72,7 +74,7 @@ def train_dqn():
         pbar.set_description(f"Ep {episode+1} | Return: {cumulative_reward:.2f} | Eps: {epsilon:.2f}")
 
     # 4. 保存模型和结果
-    model_path = config.Q_TABLE_PATH.replace(".npy", ".pth")
+    model_path = f"{config.SAVE_FOLDER}dqn_phi{phi}_psi{psi}_{config.DQN_N_EPISODES_TRAIN}.pth"
     agent.save(model_path)
     print(f"Model saved to {model_path}")
 
@@ -81,12 +83,18 @@ def train_dqn():
     plt.plot(episode_returns)
     plt.xlabel("Episode")
     plt.ylabel("Cumulative Reward (Vertical Displacement)")
-    plt.title("DQN Training Performance")
-    plot_path = config.RETURNS_PLOT_PATH.replace(".png", "_dqn.png")
+    plt.title(f"DQN Training Performance (phi={phi}, psi={psi})")
+    plot_path = f"{config.SAVE_FOLDER}returns_dqn_phi{phi}_psi{psi}_{config.DQN_N_EPISODES_TRAIN}.png"
     plt.savefig(plot_path)
+    plt.close() # Close figure to free memory
     print(f"Plot saved to {plot_path}")
 
     return episode_returns
 
 if __name__ == "__main__":
-    train_dqn()
+    # 遍历所有配置组合
+    phis = config.SWIMMER_SPEED if isinstance(config.SWIMMER_SPEED, list) else [config.SWIMMER_SPEED]
+    psis = config.ALIGNMENT_TIMESCALE if isinstance(config.ALIGNMENT_TIMESCALE, list) else [config.ALIGNMENT_TIMESCALE]
+    
+    for phi, psi in itertools.product(phis, psis):
+        train_dqn(phi, psi)

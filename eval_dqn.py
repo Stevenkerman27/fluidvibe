@@ -83,11 +83,16 @@ def plot_dqn_policy(
     plt.xlabel("x")
     plt.ylabel("y")
     
-    save_path = f"eval_dqn_phi{plot_params['phi']}_psi{plot_params['psi']}.png"
+    save_path = f"{config.SAVE_FOLDER}eval_dqn_phi{plot_params['phi']}_psi{plot_params['psi']}.png"
     plt.savefig(save_path, dpi=300)
+    plt.close()
     print(f"Plot saved to {save_path}")
 
+import itertools
+
 def eval_dqn(
+    phi: float,
+    psi: float,
     model_path: str,
     n_episodes: int = config.N_EPISODES_EVAL,
     n_steps: int = config.N_STEPS,
@@ -97,18 +102,18 @@ def eval_dqn(
     # 1. 环境初始化
     env = TaylorGreenContinuousEnvironment(
         dt=config.DT,
-        swimmer_speed=config.SWIMMER_SPEED,
+        swimmer_speed=phi,
         flow_speed=config.FLOW_SPEED,
-        alignment_timescale=config.ALIGNMENT_TIMESCALE,
+        alignment_timescale=psi,
         seed=config.SEED,
         action_type="discrete"
     )
     
     env_naive = TaylorGreenContinuousEnvironment(
         dt=config.DT,
-        swimmer_speed=config.SWIMMER_SPEED,
+        swimmer_speed=phi,
         flow_speed=config.FLOW_SPEED,
-        alignment_timescale=config.ALIGNMENT_TIMESCALE,
+        alignment_timescale=psi,
         seed=config.SEED,
         action_type="discrete"
     )
@@ -125,7 +130,8 @@ def eval_dqn(
         agent.load(model_path)
         print(f"Loaded model from {model_path}")
     else:
-        print(f"Warning: {model_path} not found. Using untrained agent.")
+        print(f"Warning: {model_path} not found. Skipping evaluation for phi={phi}, psi={psi}.")
+        return
 
     # 3. 评估循环
     rng = np.random.default_rng(seed=config.SEED)
@@ -167,22 +173,28 @@ def eval_dqn(
         total_return += ep_ret
         total_return_naive += ep_ret_naive
         
-        if logging:
+        if logging and (episode + 1) % 10 == 0:
             print(f"Ep {episode+1} | DQN Return: {ep_ret:.2f} | Naive Return: {ep_ret_naive:.2f}")
 
     # 4. 统计结果
     mean_ret = total_return / n_episodes
     mean_ret_naive = total_return_naive / n_episodes
-    print(f"\nMean DQN Return: {mean_ret:.2f}")
+    print(f"\n[phi={phi}, psi={psi}]")
+    print(f"Mean DQN Return: {mean_ret:.2f}")
     print(f"Mean Naive Return: {mean_ret_naive:.2f}")
     if mean_ret_naive != 0:
         print(f"Gain: {(mean_ret/mean_ret_naive - 1)*100:.2f}%")
 
     # 5. 绘图
     if make_plot:
-        plot_params = {"phi": config.SWIMMER_SPEED, "psi": config.ALIGNMENT_TIMESCALE}
+        plot_params = {"phi": phi, "psi": psi}
         plot_dqn_policy(n_episodes, positions, positions_naive, actions_taken, plot_params)
 
 if __name__ == "__main__":
-    model_path = config.Q_TABLE_PATH.replace(".npy", ".pth")
-    eval_dqn(model_path=model_path)
+    # 遍历所有配置组合
+    phis = config.SWIMMER_SPEED if isinstance(config.SWIMMER_SPEED, list) else [config.SWIMMER_SPEED]
+    psis = config.ALIGNMENT_TIMESCALE if isinstance(config.ALIGNMENT_TIMESCALE, list) else [config.ALIGNMENT_TIMESCALE]
+    
+    for phi, psi in itertools.product(phis, psis):
+        model_path = f"{config.SAVE_FOLDER}dqn_phi{phi}_psi{psi}_{config.DQN_N_EPISODES_TRAIN}.pth"
+        eval_dqn(phi=phi, psi=psi, model_path=model_path)
