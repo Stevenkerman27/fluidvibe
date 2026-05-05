@@ -14,15 +14,15 @@ def plot_dqn_policy(
     positions_naive: np.ndarray,
     actions_taken: np.ndarray,
     plot_params: Dict[str, float],
+    show_arrows: bool = True,
 ):
     """可视化 DQN 轨迹，逻辑参考 eval.py"""
     plt.figure(figsize=(10, 8))
     ax = plt.subplot(111)
     delta_border = np.pi / 4
 
-    x_min = np.min([positions[:, 0, :], positions_naive[:, 0, :]]) - delta_border
-    x_max = np.max([positions[:, 0, :], positions_naive[:, 0, :]]) + delta_border
-    y_min = np.min([positions[:, 1, :], positions_naive[:, 1, :]]) - delta_border
+    x_min, x_max = -np.pi, 10.0
+    y_min = -np.pi
     y_max = np.max([positions[:, 1, :], positions_naive[:, 1, :]]) + delta_border
 
     x = np.linspace(x_min, x_max, 100)
@@ -59,27 +59,29 @@ def plot_dqn_policy(
             label="Naïve" if episode == 0 else ""
         )
 
-        # 每隔一定步数绘制动作箭头
-        arrow_step = config.N_STEPS // 10
-        u_vectors = np.array([1, 0, -1, 0])
-        v_vectors = np.array([0, 1, 0, -1])
-        
-        for i in range(0, config.N_STEPS, arrow_step):
-            action = actions_taken[i, episode]
-            ax.quiver(
-                positions[i, 0, episode],
-                positions[i, 1, episode],
-                u_vectors[action],
-                v_vectors[action],
-                color="xkcd:rich purple",
-                alpha=0.6,
-                scale=25,
-                width=0.005,
-            )
-
+        if show_arrows:
+            # 每隔一定步数绘制动作箭头
+            arrow_step = config.N_STEPS // 10
+            u_vectors = np.array([1, 0, -1, 0])
+            v_vectors = np.array([0, 1, 0, -1])
+            
+            for i in range(0, config.N_STEPS, arrow_step):
+                action = actions_taken[i, episode]
+                ax.quiver(
+                    positions[i, 0, episode],
+                    positions[i, 1, episode],
+                    u_vectors[action],
+                    v_vectors[action],
+                    color="xkcd:rich purple",
+                    alpha=0.6,
+                    scale=25,
+                    width=0.005,
+                )
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
     plt.gca().set_aspect("equal")
     plt.legend(loc="upper right")
-    plt.title(f"DQN Evaluation: phi={plot_params['phi']}, psi={plot_params['psi']}")
+    plt.title(f"phi={plot_params['phi']}, psi={plot_params['psi']}")
     plt.xlabel("x")
     plt.ylabel("y")
     
@@ -98,6 +100,7 @@ def eval_dqn(
     n_steps: int = config.N_STEPS,
     logging: bool = True,
     make_plot: bool = True,
+    show_arrows: bool = False,
 ):
     # 1. 环境初始化
     env = TaylorGreenContinuousEnvironment(
@@ -188,7 +191,14 @@ def eval_dqn(
     # 5. 绘图
     if make_plot:
         plot_params = {"phi": phi, "psi": psi}
-        plot_dqn_policy(n_episodes, positions, positions_naive, actions_taken, plot_params)
+        plot_dqn_policy(
+            n_episodes, 
+            positions, 
+            positions_naive, 
+            actions_taken, 
+            plot_params,
+            show_arrows=show_arrows
+        )
 
 if __name__ == "__main__":
     # 遍历所有配置组合

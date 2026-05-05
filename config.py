@@ -29,21 +29,25 @@ INITIAL_Q_VALUE = 10.0  # Optimistic initialization
 N_EPISODES_EVAL = 80
 
 # --- DQN Specific Parameters ---
-DQN_N_EPISODES_TRAIN = 4000
+DQN_N_EPISODES_TRAIN = 400
 DQN_LEARNING_RATE = 1e-4
 DQN_GAMMA = 0.99
 DQN_EPSILON_START = 1.0
-DQN_EPSILON_DECAY = 0.995
-DQN_MIN_EPSILON = 0.05
-DQN_DEVICE = "cuda"      # "cpu", "cuda", or "auto"
-DQN_BATCH_SIZE = 64
+DQN_EPSILON_END = 0.05
+DQN_EPSILON_DECAY_DURATION = int(DQN_N_EPISODES_TRAIN)*0.9  # Number of episodes to decay from START to END
+DQN_DEVICE = "cpu"      # "cpu", "cuda", or "auto"
+DQN_BATCH_SIZE = 32
 DQN_HIDDEN_DIM = 64
 DQN_BUFFER_CAPACITY = 20000
 DQN_TARGET_UPDATE_FREQ = 200
 
 # --- Paths & Logging ---
 SAVE_FOLDER = "./q_table/"
-# Create save folder if it doesn't exist
-if not os.path.exists(SAVE_FOLDER):
-    os.makedirs(SAVE_FOLDER)
+DQN_LOG_DIR = "./logs/dqn/"
+DQN_LOG_INTERVAL = 10  # Log every N update steps
+
+# Create folders if they don't exist
+for folder in [SAVE_FOLDER, DQN_LOG_DIR]:
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 

@@ -8,6 +8,8 @@ from agent_dqn import DQNAgent
 import config
 
 import itertools
+from torch.utils.tensorboard import SummaryWriter
+import datetime
 
 def train_dqn(phi, psi):
     # 1. 初始化环境 (使用连续观测和离散动作)
@@ -34,17 +36,23 @@ def train_dqn(phi, psi):
         seed=config.SEED
     )
 
-    episode_returns = []
-    epsilon = config.DQN_EPSILON_START
-    # 使用 config 中的 epsilon 衰减策略
-    epsilon_decay = config.DQN_EPSILON_DECAY
-    min_epsilon = config.DQN_MIN_EPSILON
+    # 初始化 TensorBoard
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir = f"{config.DQN_LOG_DIR}phi{phi}_psi{psi}_{timestamp}"
+    writer = SummaryWriter(log_dir=log_dir)
+    total_steps = 0
 
+    episode_returns = []
+    
     print(f"\nStarting DQN training for phi={phi}, psi={psi} on {agent.device}...")
 
     # 3. 训练循环
     pbar = tqdm(range(config.DQN_N_EPISODES_TRAIN))
     for episode in pbar:
+        # 计算当前 episode 的 epsilon (线性衰减)
+        epsilon = max(config.DQN_EPSILON_END, 
+                      config.DQN_EPSILON_START - (config.DQN_EPSILON_START - config.DQN_EPSILON_END) * (episode / config.DQN_EPSILON_DECAY_DURATION))
+        
         state = env.reset()
         cumulative_reward = 0
         
@@ -60,18 +68,26 @@ def train_dqn(phi, psi):
             agent.remember(state, action, reward, next_state, False)
             
             # 更新网络
-            loss = agent.update()
+            info = agent.update()
+            if info and total_steps % config.DQN_LOG_INTERVAL == 0:
+                writer.add_scalar("Loss/train", info['loss'], total_steps)
+                writer.add_scalar("Diagnostic/Grad_Norm", info['grad_norm'], total_steps)
+                writer.add_scalar("Diagnostic/Avg_Q", info['avg_q'], total_steps)
             
             state = next_state
             cumulative_reward += reward
+            total_steps += 1
 
         episode_returns.append(cumulative_reward)
         
-        # 衰减 epsilon
-        epsilon = max(min_epsilon, epsilon * epsilon_decay)
+        # 记录每轮的回报和探索率
+        writer.add_scalar("Reward/episode", cumulative_reward, episode)
+        writer.add_scalar("Config/Epsilon", epsilon, episode)
         
         # 更新进度条信息
         pbar.set_description(f"Ep {episode+1} | Return: {cumulative_reward:.2f} | Eps: {epsilon:.2f}")
+
+    writer.close()
 
     # 4. 保存模型和结果
     model_path = f"{config.SAVE_FOLDER}dqn_phi{phi}_psi{psi}_{config.DQN_N_EPISODES_TRAIN}.pth"

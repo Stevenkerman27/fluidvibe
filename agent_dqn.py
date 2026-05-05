@@ -97,8 +97,8 @@ class DQNAgent:
         """存入经验"""
         self.memory.push(state, action, reward, next_state, done)
 
-    def update(self) -> Optional[float]:
-        """从 Buffer 中采样并更新网络参数"""
+    def update(self) -> Optional[dict]:
+        """从 Buffer 中采样并更新网络参数，返回诊断指标"""
         if len(self.memory) < self.batch_size:
             return None
 
@@ -112,6 +112,7 @@ class DQNAgent:
 
         # 当前估计的 Q 值
         current_q = self.policy_net(states).gather(1, actions)
+        avg_q = current_q.mean().item()
 
         # 计算 Target Q 值（使用目标网络）
         with torch.no_grad():
@@ -124,6 +125,14 @@ class DQNAgent:
         # 反向传播
         self.optimizer.zero_grad()
         loss.backward()
+
+        # 计算梯度范数 (Grad Norm)
+        grad_norm = 0.0
+        for p in self.policy_net.parameters():
+            if p.grad is not None:
+                grad_norm += p.grad.detach().data.norm(2).item() ** 2
+        grad_norm = grad_norm ** 0.5
+
         self.optimizer.step()
 
         # 定期同步目标网络
@@ -131,7 +140,11 @@ class DQNAgent:
         if self.steps_done % self.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
 
-        return loss.item()
+        return {
+            "loss": loss.item(),
+            "avg_q": avg_q,
+            "grad_norm": grad_norm
+        }
 
     def save(self, path: str):
         torch.save(self.policy_net.state_dict(), path)
