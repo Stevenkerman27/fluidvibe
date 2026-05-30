@@ -15,6 +15,7 @@ def plot_dqn_policy(
     actions_taken: np.ndarray,
     plot_params: Dict[str, float],
     show_arrows: bool = True,
+    filename_prefix: str = ""
 ):
     """可视化 DQN 轨迹，逻辑参考 eval.py"""
     plt.figure(figsize=(10, 8))
@@ -80,12 +81,22 @@ def plot_dqn_policy(
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
     plt.gca().set_aspect("equal")
-    plt.legend(loc="upper right")
+    plt.legend(bbox_to_anchor=(1.8, 1), loc='upper right')
     plt.title(f"phi={plot_params['phi']}, psi={plot_params['psi']}")
     plt.xlabel("x")
     plt.ylabel("y")
+    plt.tight_layout()
     
-    save_path = f"{config.SAVE_FOLDER}eval_dqn_phi{plot_params['phi']}_psi{plot_params['psi']}.png"
+    # Ensure pics directory exists
+    pics_dir = "pics"
+    if not os.path.exists(pics_dir):
+        os.makedirs(pics_dir)
+        
+    save_name = f"eval_dqn_phi{plot_params['phi']}_psi{plot_params['psi']}_{plot_params['mean_y']:.2f}({plot_params['mean_y_naive']:.2f}).png"
+    if filename_prefix:
+        save_name = f"{filename_prefix}_{save_name}"
+    
+    save_path = os.path.join(pics_dir, save_name)
     plt.savefig(save_path, dpi=300)
     plt.close()
     print(f"Plot saved to {save_path}")
@@ -95,12 +106,14 @@ import itertools
 def eval_dqn(
     phi: float,
     psi: float,
-    model_path: str,
+    model_path: str = None,
+    agent: DQNAgent = None,
     n_episodes: int = config.N_EPISODES_EVAL,
     n_steps: int = config.N_STEPS,
     logging: bool = True,
     make_plot: bool = True,
     show_arrows: bool = False,
+    filename_prefix: str = ""
 ):
     # 1. 环境初始化
     env = TaylorGreenContinuousEnvironment(
@@ -122,24 +135,30 @@ def eval_dqn(
     )
 
     # 2. 智能体初始化并加载模型
-    agent = DQNAgent(
-        state_dim=2,
-        action_dim=4,
-        hidden_dim=config.DQN_HIDDEN_DIM,
-        device=config.DQN_DEVICE
-    )
-    
-    if os.path.exists(model_path):
-        agent.load(model_path)
-        print(f"Loaded model from {model_path}")
+    if agent is None:
+        agent = DQNAgent(
+            state_dim=2,
+            action_dim=4,
+            hidden_dim=config.DQN_HIDDEN_DIM,
+            device=config.DQN_DEVICE
+        )
+        
+        if model_path and os.path.exists(model_path):
+            agent.load(model_path)
+            print(f"Loaded model from {model_path}")
+        else:
+            print(f"Warning: {model_path} not found or not provided. Skipping evaluation for phi={phi}, psi={psi}.")
+            return
     else:
-        print(f"Warning: {model_path} not found. Skipping evaluation for phi={phi}, psi={psi}.")
-        return
+        if logging:
+            print(f"Using provided agent for evaluation.")
 
     # 3. 评估循环
     rng = np.random.default_rng(seed=config.SEED)
     total_return = 0
     total_return_naive = 0
+    total_y_disp = 0
+    total_y_disp_naive = 0
     
     positions = np.zeros([n_steps, 2, n_episodes])
     positions_naive = np.zeros([n_steps, 2, n_episodes])
@@ -148,6 +167,7 @@ def eval_dqn(
     for episode in range(n_episodes):
         # 统一初始状态
         pos_init = np.array([rng.uniform(0, 2*np.pi), rng.uniform(0, 2*np.pi)])
+        y_init = pos_init[1]
         ori_init = rng.uniform(0, 2*np.pi)
         
         state = env.reset(pos_init.copy(), ori_init)
@@ -175,6 +195,8 @@ def eval_dqn(
             
         total_return += ep_ret
         total_return_naive += ep_ret_naive
+        total_y_disp += (env.swimmer_position[1] - y_init)
+        total_y_disp_naive += (env_naive.swimmer_position[1] - y_init)
         
         if logging and (episode + 1) % 10 == 0:
             print(f"Ep {episode+1} | DQN Return: {ep_ret:.2f} | Naive Return: {ep_ret_naive:.2f}")
@@ -182,22 +204,34 @@ def eval_dqn(
     # 4. 统计结果
     mean_ret = total_return / n_episodes
     mean_ret_naive = total_return_naive / n_episodes
+    mean_y_disp = total_y_disp / n_episodes
+    mean_y_disp_naive = total_y_disp_naive / n_episodes
+    
     print(f"\n[phi={phi}, psi={psi}]")
     print(f"Mean DQN Return: {mean_ret:.2f}")
     print(f"Mean Naive Return: {mean_ret_naive:.2f}")
+    print(f"Mean DQN Net Y-Displacement: {mean_y_disp:.2f}")
+    print(f"Mean Naive Net Y-Displacement: {mean_y_disp_naive:.2f}")
+    
     if mean_ret_naive != 0:
         print(f"Gain: {(mean_ret/mean_ret_naive - 1)*100:.2f}%")
 
     # 5. 绘图
     if make_plot:
-        plot_params = {"phi": phi, "psi": psi}
+        plot_params = {
+            "phi": phi, 
+            "psi": psi,
+            "mean_y": mean_y_disp,
+            "mean_y_naive": mean_y_disp_naive
+        }
         plot_dqn_policy(
             n_episodes, 
             positions, 
             positions_naive, 
             actions_taken, 
             plot_params,
-            show_arrows=show_arrows
+            show_arrows=show_arrows,
+            filename_prefix=filename_prefix
         )
 
 if __name__ == "__main__":
