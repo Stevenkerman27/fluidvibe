@@ -20,7 +20,7 @@ def plot_policy(
     positions_naive: np.ndarray,
     actions_taken: np.ndarray,
     plot_params: Dict[str, float],
-    show_arrows: bool = True,
+    show_arrows: bool = False,
     filename_prefix: str = ""
 ):
     plt.rcParams.update({'font.size': 14})
@@ -134,7 +134,7 @@ def plot_policy(
     if not os.path.exists(pics_dir):
         os.makedirs(pics_dir)
         
-    save_name = f"phi{plot_params['phi']}_psi{plot_params['psi']}_{plot_params['mean_y']:.2f}({plot_params['mean_y_naive']:.2f}).png"
+    save_name = f"single_phi{plot_params['phi']}_psi{plot_params['psi']}_{plot_params['mean_y']:.2f}({plot_params['mean_y_naive']:.2f}).png"
     if filename_prefix:
         save_name = f"{filename_prefix}_{save_name}"
     
@@ -151,7 +151,7 @@ def eval(
     n_steps: int = config.N_STEPS,
     logging: bool = True,
     make_plot: bool = False,
-    show_arrows: bool = True,
+    show_arrows: bool = False,
     filename_prefix: str = ""
 ) -> None:
     rng = np.random.default_rng(seed=config.SEED)
@@ -256,9 +256,10 @@ def eval(
 
 if __name__ == "__main__":
     # Define parameters for standalone evaluation
-    phi = 0.2
-    psi = 1.2
-    q_table_path = f"{config.SAVE_FOLDER}q_table_phi{phi}_psi{psi}_{config.N_EPISODES_TRAIN}.npy"
+    phi = 0.3
+    psi = 1.0
+    N_EPISODES_TRAIN = 1000
+    q_table_path = f"{config.SAVE_FOLDER}q_table_phi{phi}_psi{psi}_{N_EPISODES_TRAIN}.npy"
     
     print(f"Loading policy from {q_table_path}...")
     try:

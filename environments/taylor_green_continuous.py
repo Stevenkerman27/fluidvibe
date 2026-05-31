@@ -60,6 +60,12 @@ class TaylorGreenContinuousEnvironment(TaylorGreenEnvironment):
             vorticity_scaled = 0
 
         orientation = np.arctan2(self.swimming_velocity[1], self.swimming_velocity[0])
+        
+        # Shift the branch cut from -pi (left) to -pi/2 (down)
+        # so that orientation range becomes [-pi/2, 3pi/2)
+        if orientation < -np.pi / 2:
+            orientation += 2 * np.pi
+            
         return np.array([vorticity_scaled, orientation])
 
     def get_preferred_orientation(self, action):

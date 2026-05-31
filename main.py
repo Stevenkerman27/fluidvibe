@@ -4,6 +4,7 @@ import argparse
 from environments.taylor_green import TaylorGreenEnvironment
 from train import train
 from eval import eval, load_policy
+from visualize_policy import plot_policy
 import config
 
 if __name__ == "__main__":
@@ -43,6 +44,11 @@ if __name__ == "__main__":
                 logging=False, 
                 seed=config.SEED,
             )
+            # Visualize the trained policy
+            print(f"Visualizing policy...")
+            plot_filename = q_table_filename.replace(".npy", ".png")
+            plot_policy(q_table_filename, save_path=plot_filename)
+            print(f"Policy plot saved to {plot_filename}")
         else:
             print(f"Skipping training, looking for {q_table_filename}...")
         

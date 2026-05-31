@@ -7,7 +7,7 @@ from eval import eval, load_policy
 def main():
     parser = argparse.ArgumentParser(description="Generalization test: Evaluate a single Q-table on multiple environments.")
     # Default path for convenience as requested
-    default_q_table = f"{config.SAVE_FOLDER}q_table_phi0.3_psi1.0_3000.npy"
+    default_q_table = f"{config.SAVE_FOLDER}q_table_phi0.3_psi1.0_2000.npy"
     parser.add_argument("--q_table", type=str, default=default_q_table, help="Path to the Q-table (.npy) to evaluate.")
     args = parser.parse_args()
 

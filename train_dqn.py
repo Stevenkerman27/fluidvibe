@@ -43,6 +43,7 @@ def train_dqn(phi, psi):
     total_steps = 0
 
     episode_returns = []
+    episode_displacements = []
     
     print(f"\nStarting DQN training for phi={phi}, psi={psi} on {agent.device}...")
 
@@ -54,6 +55,7 @@ def train_dqn(phi, psi):
                       config.DQN_EPSILON_START - (config.DQN_EPSILON_START - config.DQN_EPSILON_END) * (episode / config.DQN_EPSILON_DECAY_DURATION))
         
         state = env.reset()
+        start_y = env.swimmer_position[1]
         cumulative_reward = 0
         
         for step in range(config.N_STEPS):
@@ -68,24 +70,28 @@ def train_dqn(phi, psi):
             agent.remember(state, action, reward, next_state, False)
             
             # 更新网络
-            info = agent.update()
-            if info and total_steps % config.DQN_LOG_INTERVAL == 0:
-                writer.add_scalar("Loss/train", info['loss'], total_steps)
-                writer.add_scalar("Diagnostic/Grad_Norm", info['grad_norm'], total_steps)
-                writer.add_scalar("Diagnostic/Avg_Q", info['avg_q'], total_steps)
+            if total_steps % config.DQN_TRAIN_FREQ == 0:
+                info = agent.update()
+                if info and total_steps % (config.DQN_LOG_INTERVAL * config.DQN_TRAIN_FREQ) == 0:
+                    writer.add_scalar("Loss/train", info['loss'], total_steps)
+                    writer.add_scalar("Diagnostic/Grad_Norm", info['grad_norm'], total_steps)
+                    writer.add_scalar("Diagnostic/Avg_Q", info['avg_q'], total_steps)
             
             state = next_state
             cumulative_reward += reward
             total_steps += 1
 
+        total_dy = env.swimmer_position[1] - start_y
         episode_returns.append(cumulative_reward)
+        episode_displacements.append(total_dy)
         
-        # 记录每轮的回报和探索率
+        # 记录每轮的回报、位移和探索率
         writer.add_scalar("Reward/episode", cumulative_reward, episode)
+        writer.add_scalar("Displacement/episode", total_dy, episode)
         writer.add_scalar("Config/Epsilon", epsilon, episode)
         
         # 更新进度条信息
-        pbar.set_description(f"Ep {episode+1} | Return: {cumulative_reward:.2f} | Eps: {epsilon:.2f}")
+        pbar.set_description(f"Ep {episode+1} | Return: {cumulative_reward:.2f} | DY: {total_dy:.2f} | Eps: {epsilon:.2f}")
 
     writer.close()
 
@@ -94,18 +100,39 @@ def train_dqn(phi, psi):
     agent.save(model_path)
     print(f"Model saved to {model_path}")
 
-    # 绘制回报曲线
+    # 绘制回报和位移曲线
     plt.figure(figsize=(10, 5))
-    plt.plot(episode_returns)
+    
+    # 计算滑动平均 (窗口大小 50)
+    window_size = 50
+    def moving_average(x, w):
+        if len(x) < w:
+            return x # 数据不足时不进行平均
+        return np.convolve(x, np.ones(w), 'valid') / w
+
+    # 绘制原始数据 (增加透明度，不带标签)
+    plt.plot(episode_returns, color='blue', alpha=0.3)
+    plt.plot(episode_displacements, color='orange', alpha=0.3)
+    
+    # 绘制滑动平均 (带标签)
+    returns_ma = moving_average(episode_returns, window_size)
+    displacements_ma = moving_average(episode_displacements, window_size)
+    
+    # 对齐 X 轴 (滑动平均会缩短序列)
+    x_ma = range(window_size - 1, len(episode_returns))
+    plt.plot(x_ma, returns_ma, color='blue', label='Cumulative Reward (MA50)')
+    plt.plot(x_ma, displacements_ma, color='orange', label='Y-Displacement (MA50)')
+
     plt.xlabel("Episode")
-    plt.ylabel("Cumulative Reward (Vertical Displacement)")
+    plt.ylabel("Value")
+    plt.legend()
     plt.title(f"DQN Training Performance (phi={phi}, psi={psi})")
     plot_path = f"{config.SAVE_FOLDER}returns_dqn_phi{phi}_psi{psi}_{config.DQN_N_EPISODES_TRAIN}.png"
     plt.savefig(plot_path)
     plt.close() # Close figure to free memory
     print(f"Plot saved to {plot_path}")
 
-    return episode_returns
+    return episode_returns, episode_displacements
 
 if __name__ == "__main__":
     # 遍历所有配置组合
