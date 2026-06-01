@@ -12,7 +12,8 @@ FLOW_SPEED = 1.0         # u0
 DIFFUSIVITY_ROTATIONAL = 0.0001
 DIFFUSIVITY_TRANSLATIONAL = 0.001
 LATERAL_PENALTY_WEIGHT = 0.02
-LATERAL_PENALTY_THRESHOLD = np.pi  # Absolute distance threshold before penalty
+LATERAL_X_MIN = -0.5 * np.pi
+LATERAL_X_MAX = 2.5 * np.pi
 MIN_FLOW_SPEED_THRESHOLD = 1e-8
 VORTICITY_THRESHOLD = 1.0 / 3.0
 SEED = 42
@@ -29,11 +30,11 @@ INITIAL_Q_VALUE = 20.0  # Optimistic initialization
 N_EPISODES_EVAL = 80
 
 # --- DQN Specific Parameters ---
-DQN_N_EPISODES_TRAIN = 1200
-DQN_LEARNING_RATE = 5e-4
+DQN_N_EPISODES_TRAIN = 2000
+DQN_LEARNING_RATE = 1e-4
 DQN_GAMMA = 0.99
 DQN_EPSILON_START = 1.0
-DQN_EPSILON_END = 0.5
+DQN_EPSILON_END = 0.4
 DQN_EPSILON_DECAY_DURATION = int(DQN_N_EPISODES_TRAIN)*0.9  # Number of episodes to decay from START to END
 DQN_DEVICE = "cpu"      # "cpu", "cuda", or "auto"
 DQN_BATCH_SIZE = 64
@@ -41,6 +42,9 @@ DQN_HIDDEN_DIM = 64
 DQN_BUFFER_CAPACITY = 20000
 DQN_TRAIN_FREQ = 4       # Number of environment steps between each network update
 DQN_TARGET_UPDATE_FREQ = 300
+DQN_LEARNING_STARTS = 1000  # Timestep to start learning
+DQN_TAU = 0.5             # Target network update rate
+DQN_SAVE_MODEL = True
 
 
 # --- Paths & Logging ---

@@ -113,11 +113,13 @@ class TaylorGreenEnvironment(Environment):
         
         dy = self.swimmer_position[1] - swimmer_position_old[1]
         
-        # Calculate absolute deviation from the starting X coordinate
-        dx_total = self.swimmer_position[0] - self.initial_x
-        
-        # Only penalize if deviation exceeds the threshold
-        lateral_deviation = max(0, abs(dx_total) - config.LATERAL_PENALTY_THRESHOLD)
+        # Calculate deviation based on absolute X boundaries
+        x_curr = self.swimmer_position[0]
+        lateral_deviation = 0.0
+        if x_curr < config.LATERAL_X_MIN:
+            lateral_deviation = config.LATERAL_X_MIN - x_curr
+        elif x_curr > config.LATERAL_X_MAX:
+            lateral_deviation = x_curr - config.LATERAL_X_MAX
         
         reward = dy - config.LATERAL_PENALTY_WEIGHT * lateral_deviation
 

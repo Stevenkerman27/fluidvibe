@@ -1,12 +1,31 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from typing import Dict
+from typing import Dict, Optional
 import os
+
+# JAX/Flax for cleanrl models
+import jax
+import jax.numpy as jnp
+import flax
+import flax.linen as nn
 
 from environments.taylor_green_continuous import TaylorGreenContinuousEnvironment
 from agent_dqn import DQNAgent
 import config
+
+class JaxQNetwork(nn.Module):
+    action_dim: int
+    hidden_dim: int = config.DQN_HIDDEN_DIM
+
+    @nn.compact
+    def __call__(self, x: jnp.ndarray):
+        x = nn.Dense(self.hidden_dim)(x)
+        x = nn.tanh(x)
+        x = nn.Dense(self.hidden_dim)(x)
+        x = nn.tanh(x)
+        x = nn.Dense(self.action_dim)(x)
+        return x
 
 def plot_dqn_policy(
     n_episodes: int,
@@ -135,7 +154,31 @@ def eval_dqn(
     )
 
     # 2. 智能体初始化并加载模型
-    if agent is None:
+    is_jax = model_path and model_path.endswith(".cleanrl_model")
+    jax_params = None
+    jax_q_net = None
+    
+    if is_jax:
+        jax_q_net = JaxQNetwork(action_dim=4, hidden_dim=config.DQN_HIDDEN_DIM)
+        obs_dummy = jnp.zeros((1, 2))
+        variables = jax_q_net.init(jax.random.PRNGKey(0), obs_dummy)
+        
+        with open(model_path, "rb") as f:
+            params_bytes = f.read()
+        
+        state_dict = flax.serialization.msgpack_restore(params_bytes)
+        if 'params' in state_dict:
+            jax_params = flax.serialization.from_state_dict(variables['params'], state_dict['params'])
+        else:
+            jax_params = flax.serialization.from_state_dict(variables['params'], state_dict)
+            
+        @jax.jit
+        def get_jax_action(obs):
+            q_values = jax_q_net.apply({'params': jax_params}, obs)
+            return q_values.argmax(axis=-1)
+            
+        print(f"Loaded JAX model from {model_path}")
+    elif agent is None:
         agent = DQNAgent(
             state_dim=2,
             action_dim=4,
@@ -145,7 +188,7 @@ def eval_dqn(
         
         if model_path and os.path.exists(model_path):
             agent.load(model_path)
-            print(f"Loaded model from {model_path}")
+            print(f"Loaded PT model from {model_path}")
         else:
             print(f"Warning: {model_path} not found or not provided. Skipping evaluation for phi={phi}, psi={psi}.")
             return
@@ -178,7 +221,11 @@ def eval_dqn(
         
         for i in range(n_steps):
             # DQN 动作选择 (epsilon=0)
-            action = agent.get_action(state, epsilon=0.0)
+            if is_jax:
+                action = int(get_jax_action(state[np.newaxis, :])[0])
+            else:
+                action = agent.get_action(state, epsilon=0.0)
+                
             actions_taken[i, episode] = action
             
             # 环境步进
@@ -240,5 +287,10 @@ if __name__ == "__main__":
     psis = config.ALIGNMENT_TIMESCALE if isinstance(config.ALIGNMENT_TIMESCALE, list) else [config.ALIGNMENT_TIMESCALE]
     
     for phi, psi in itertools.product(phis, psis):
-        model_path = f"{config.SAVE_FOLDER}dqn_phi{phi}_psi{psi}_{config.DQN_N_EPISODES_TRAIN}.pth"
+        # Try JAX model first
+        model_path = f"{config.SAVE_FOLDER}dqn_jax_phi{phi}_psi{psi}.cleanrl_model"
+        if not os.path.exists(model_path):
+            # Fallback to PT model
+            model_path = f"{config.SAVE_FOLDER}dqn_phi{phi}_psi{psi}_{config.DQN_N_EPISODES_TRAIN}.pth"
+            
         eval_dqn(phi=phi, psi=psi, model_path=model_path)
