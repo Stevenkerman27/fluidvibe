@@ -160,7 +160,7 @@ def eval_dqn(
     
     if is_jax:
         jax_q_net = JaxQNetwork(action_dim=4, hidden_dim=config.DQN_HIDDEN_DIM)
-        obs_dummy = jnp.zeros((1, 2))
+        obs_dummy = jnp.zeros((1, 3))
         variables = jax_q_net.init(jax.random.PRNGKey(0), obs_dummy)
         
         with open(model_path, "rb") as f:

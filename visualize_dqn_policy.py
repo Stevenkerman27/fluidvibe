@@ -36,7 +36,7 @@ def plot_dqn_policy(model_path, save_path=None):
     """
     # Initialize JAX network
     q_network = QNetwork(action_dim=4, hidden_dim=config.DQN_HIDDEN_DIM)
-    obs_dummy = jnp.zeros((1, 2))
+    obs_dummy = jnp.zeros((1, 3))
     variables = q_network.init(jax.random.PRNGKey(0), obs_dummy)
     
     # Load parameters
@@ -67,11 +67,11 @@ def plot_dqn_policy(model_path, save_path=None):
     V, O = np.meshgrid(vort_range, ori_range)
     
     # Vectorized computation for the entire grid
-    # Grid shape: (n_ori, n_vort), we need to create (n_ori * n_vort, 2)
-    # Order of features: [vorticity, orientation]
+    # Grid shape: (n_ori, n_vort), we need to create (n_ori * n_vort, 3)
+    # Order of features: [vorticity, sin_orientation, cos_orientation]
     vort_flat = V.flatten()
     ori_flat = O.flatten()
-    states = jnp.stack([vort_flat, ori_flat], axis=-1)
+    states = jnp.stack([vort_flat, jnp.sin(ori_flat), jnp.cos(ori_flat)], axis=-1)
     
     # Inference in batches to avoid OOM if grid is huge, but 150x150 is fine
     actions_flat = get_best_action(states)
@@ -112,10 +112,10 @@ def plot_dqn_policy(model_path, save_path=None):
     # Custom legend
     from matplotlib.patches import Patch
     legend_elements = [
-        Patch(facecolor=colors[0], label='0: Right'),
-        Patch(facecolor=colors[1], label='1: Up'),
-        Patch(facecolor=colors[2], label='2: Left'),
-        Patch(facecolor=colors[3], label='3: Down')
+        Patch(facecolor=colors[0], label='Right'),
+        Patch(facecolor=colors[1], label='Up'),
+        Patch(facecolor=colors[2], label='Left'),
+        Patch(facecolor=colors[3], label='Down')
     ]
     plt.legend(handles=legend_elements, loc='upper right', fontsize=20)
 
@@ -125,7 +125,7 @@ def plot_dqn_policy(model_path, save_path=None):
     
     # Add orientation labels (pi multiples)
     plt.yticks([-np.pi/2, 0, np.pi/2, np.pi, 1.5*np.pi], 
-               [r'$-\pi/2$', r'$0$', r'$\pi/2$', r'$\pi$', r'$3\pi/2$'])
+               ['Down', 'Right', 'Up', 'Left', 'Down'])
 
     plt.tight_layout()
     

@@ -54,7 +54,7 @@ class TaylorGreenContinuousEnvironment(TaylorGreenEnvironment):
     def _get_observation(self):
         """
         Returns:
-            np.ndarray: observation = [vorticity, orientation], both are continuous-valued.
+            np.ndarray: observation = [vorticity_scaled, sin_theta, cos_theta], all are continuous-valued.
         """
 
         if abs(self.u0) > _MIN_FLOW_SPEED_THRESHOLD:
@@ -64,12 +64,7 @@ class TaylorGreenContinuousEnvironment(TaylorGreenEnvironment):
 
         orientation = np.arctan2(self.swimming_velocity[1], self.swimming_velocity[0])
         
-        # Shift the branch cut from -pi (left) to -pi/2 (down)
-        # so that orientation range becomes [-pi/2, 3pi/2)
-        if orientation < -np.pi / 2:
-            orientation += 2 * np.pi
-            
-        return np.array([vorticity_scaled, orientation])
+        return np.array([vorticity_scaled, np.sin(orientation), np.cos(orientation)])
 
     def get_preferred_orientation(self, action):
         """Transforms the action into a preferred swimmer orientation."""
@@ -98,10 +93,9 @@ class TaylorGreenGymWrapper(gym.Env):
         }
         self.env = TaylorGreenContinuousEnvironment(**env_kwargs)
         
-        # State: [vorticity_scaled, orientation]
-        # orientation is in [-pi/2, 3pi/2)
-        low = np.array([-np.inf, -np.pi / 2], dtype=np.float32)
-        high = np.array([np.inf, 3 * np.pi / 2], dtype=np.float32)
+        # State: [vorticity_scaled, sin_theta, cos_theta]
+        low = np.array([-np.inf, -1.0, -1.0], dtype=np.float32)
+        high = np.array([np.inf, 1.0, 1.0], dtype=np.float32)
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         
         if self.env.action_type == "discrete":
