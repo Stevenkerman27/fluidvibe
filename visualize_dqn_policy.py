@@ -80,11 +80,9 @@ def plot_dqn_policy(model_path, save_path=None):
     # Plotting
     plt.figure(figsize=(8, 9))
     
-    # Custom discrete colormap for 4 actions
-    from matplotlib.colors import ListedColormap
+    # Okabe-Ito palette: Blue, Orange, Bluish Green, Reddish Purple
     # Actions: 0: Right (0), 1: Up (90), 2: Left (180), 3: Down (270)
-    # Colors: Red (R), Green (U), Blue (L), Yellow (D)
-    colors = ['#ff9999', '#99ff99', '#9999ff', '#ffff99']
+    colors = ['#0072B2', '#E69F00', '#009E73', '#CC79A7']
     cmap = ListedColormap(colors)
     
     plt.pcolormesh(V, O, policy_grid, cmap=cmap, shading='auto', vmin=0, vmax=3)
@@ -117,7 +115,7 @@ def plot_dqn_policy(model_path, save_path=None):
         Patch(facecolor=colors[2], label='Left'),
         Patch(facecolor=colors[3], label='Down')
     ]
-    plt.legend(handles=legend_elements, loc='upper right', fontsize=20)
+    plt.legend(handles=legend_elements, loc='upper right', fontsize=28)
 
     # Add reference lines for vorticity threshold
     plt.axvline(x=config.VORTICITY_THRESHOLD, color='k', linestyle='--', alpha=0.5)
