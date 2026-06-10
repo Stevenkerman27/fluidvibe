@@ -70,5 +70,7 @@ def test_dqn_agent_remember_and_update():
     
     agent.remember(state, 1, 0.5, next_state, True)
     # Now it should update
-    loss = agent.update()
-    assert isinstance(loss, float)
+    update_info = agent.update()
+    assert isinstance(update_info, dict)
+    assert "loss" in update_info
+    assert isinstance(update_info["loss"], float)

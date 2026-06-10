@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import os
 import glob
 import re
@@ -11,8 +12,8 @@ import jax.numpy as jnp
 import flax
 import flax.linen as nn
 
-plt.rcParams['xtick.labelsize'] = 24
-plt.rcParams['ytick.labelsize'] = 24
+plt.rcParams['xtick.labelsize'] = 32
+plt.rcParams['ytick.labelsize'] = 32
 
 class QNetwork(nn.Module):
     action_dim: int
@@ -88,8 +89,8 @@ def plot_dqn_policy(model_path, save_path=None):
     plt.pcolormesh(V, O, policy_grid, cmap=cmap, shading='auto', vmin=0, vmax=3)
     
     # Add labels and formatting
-    plt.xlabel("Vorticity (scaled)", fontsize=36)
-    plt.ylabel("Swimmer Orientation", fontsize=36)
+    plt.xlabel("Vorticity (scaled)", fontsize=44)
+    plt.ylabel("Swimmer Orientation", fontsize=44)
     
     phi_match = re.search(r'phi([\d\.]+)', model_path)
     psi_match = re.search(r'psi([\d\.]+)', model_path)
@@ -105,7 +106,7 @@ def plot_dqn_policy(model_path, save_path=None):
     elif final_match:
         ep_suffix = ", final"
     
-    plt.title(f"DQN Policy (phi{phi_val}, psi{psi_val}{ep_suffix})", fontsize=24)
+    plt.title(f"phi{phi_val}, psi{psi_val}{ep_suffix}", fontsize=32)
     
     # Custom legend
     from matplotlib.patches import Patch
@@ -115,7 +116,7 @@ def plot_dqn_policy(model_path, save_path=None):
         Patch(facecolor=colors[2], label='Left'),
         Patch(facecolor=colors[3], label='Down')
     ]
-    plt.legend(handles=legend_elements, loc='upper right', fontsize=28)
+    plt.legend(handles=legend_elements, loc='upper right', fontsize=24)
 
     # Add reference lines for vorticity threshold
     plt.axvline(x=config.VORTICITY_THRESHOLD, color='k', linestyle='--', alpha=0.5)
@@ -128,7 +129,7 @@ def plot_dqn_policy(model_path, save_path=None):
     plt.tight_layout()
     
     if save_path:
-        plt.savefig(save_path, dpi=200)
+        plt.savefig(save_path, dpi=200, bbox_inches='tight')
         plt.close()
         print(f"Saved: {save_path}")
     else:

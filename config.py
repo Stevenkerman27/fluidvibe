@@ -30,20 +30,20 @@ INITIAL_Q_VALUE = 20.0  # Optimistic initialization
 N_EPISODES_EVAL = 80
 
 # --- DQN Specific Parameters ---
-DQN_N_EPISODES_TRAIN = 2000
+DQN_N_EPISODES_TRAIN = 1600
 DQN_LEARNING_RATE = 1e-4
-DQN_GAMMA = 0.99
+DQN_GAMMA = 0.999
 DQN_EPSILON_START = 1.0
-DQN_EPSILON_END = 0.4
-DQN_EPSILON_DECAY_DURATION = int(DQN_N_EPISODES_TRAIN)*0.9  # Number of episodes to decay from START to END
+DQN_EPSILON_END = 0.05
+DQN_EPSILON_DECAY_DURATION = 1200
 DQN_DEVICE = "cpu"      # "cpu", "cuda", or "auto"
 DQN_BATCH_SIZE = 64
 DQN_HIDDEN_DIM = 64
-DQN_BUFFER_CAPACITY = 20000
+DQN_BUFFER_CAPACITY = 50000
 DQN_TRAIN_FREQ = 4       # Number of environment steps between each network update
-DQN_TARGET_UPDATE_FREQ = 300
+DQN_TARGET_UPDATE_FREQ = 1
 DQN_LEARNING_STARTS = 1000  # Timestep to start learning
-DQN_TAU = 0.5             # Target network update rate
+DQN_TAU = 0.005             # Target network update rate
 DQN_SAVE_MODEL = True
 
 

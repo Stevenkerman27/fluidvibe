@@ -360,14 +360,6 @@ if __name__ == "__main__":
             ax2.tick_params(axis='y', labelcolor='green', labelsize=18)
             ax2.set_ylim(min(episodic_y_dists), max(episodic_y_dists))
 
-        # Legends
-        lines_1, labels_1 = ax1.get_legend_handles_labels()
-        if len(episodic_y_dists) > 0:
-            lines_2, labels_2 = ax2.get_legend_handles_labels()
-            ax1.legend(lines_1 + lines_2, labels_1 + labels_2, loc='lower right', fontsize=16)
-        else:
-            ax1.legend(loc='upper left', fontsize=18)
-
         plt.title(f"DQN Training Performance (phi={args.phi}, psi={args.psi})", fontsize=20)
         plot_path = f"{config.SAVE_FOLDER}returns_dqn_jax_phi{args.phi}_psi{args.psi}.png"
         plt.savefig(plot_path)
